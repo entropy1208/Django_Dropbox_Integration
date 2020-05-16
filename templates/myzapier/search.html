@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block head_title %} Search {% endblock %}
+
+{% block head_extra %}
+
+    <link rel="stylesheet" type="text/css" href="http://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css"  media="all" />
+
+{% endblock %}
+
+{% block content %}
+
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" ></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js" ></script>
+
+    <!--This is the search box.-->
+    <div class="ui-widget">
+      <label for="search">Search: </label>
+      <input id="search">
+    </div>
+
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+{% endblock %}
+
+{% block js %}
+
+    <script type="text/javascript">
+        $(function() {
+          $("#search").autocomplete({
+            source: "/zapier/action/search/",
+          });
+        });
+    </script>
+
+{% endblock %}
+
+

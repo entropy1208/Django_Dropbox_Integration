@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% load staticfiles %}
+
+{% block head_title %} Upload {% endblock %}
+
+{% block head_extra %}
+
+    <link rel="stylesheet" type="text/css" href="{% static 'css/main.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'easyui/themes/default/easyui.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'easyui/themes/icon.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'easyui/demo.css' %}"/>
+
+{% endblock %}
+
+{% block content %}
+
+    {% load myzapier_extras %}
+
+    <script type="text/javascript" src="{% static 'easyui/jquery.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'easyui/jquery.easyui.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/script.js' %}"></script>
+    <header>
+        <h1 align="center">My Zapier</h1>
+    </header>
+
+    {% show_breadcrumbs %}
+
+    <ul>
+        <p>
+        <table border="2">
+            {% for path in paths %}
+            <tr>
+                <td>
+                    <li>
+                        <div style="padding:15px;padding-top: 0px;">
+                            <div>
+                        {% if '.' in path %}
+                            <img src="{% static 'icons/dropbox-file-icon.png' %}" width="15%" height="15%">
+                        {% else %}
+                            <img src="{% static 'icons/dropbox-folder-icon.jpeg' %}" width="15%" height="15%">
+                        {% endif %}
+                            </div>
+                            <div style="margin-left: 54px;margin-top: -28px;">
+                                <a href="{% url 'upload' path=path %}">{{ path|onlyname }}</a>
+                            </div>
+                        </div>
+                    </li>
+                </td>
+                <td>
+                    {% if '.' in path %}
+                        <a class="easyui-linkbutton"
+                           href="{% url 'action' action_name='download' path=path %}">Download</a>
+                    {% endif %}
+                </td>
+                <td><a class="easyui-linkbutton"
+                       href="{% url 'action' action_name='delete' path=path %}">Delete</a></td>
+                <td><a href="#" class="easyui-linkbutton"
+                       id="{% url 'action' action_name='move' path=path %}"
+                       onclick="popForm(this.id); return false;">Move</a></td>
+                <td><a href="#" class="easyui-linkbutton"
+                       id="{% url 'action' action_name='copy' path=path %}"
+                       onclick="popForm(this.id); return false;">Copy</a></td>
+            </tr>
+            {% empty %}
+            <li>No directories here!</li>
+            {% endfor %}
+        </table>
+    </ul>
+
+    <div>
+        <a href="{% url 'search' %}">Search</a>
+    </div>
+
+    <!--This is the dialog box.-->
+    <div id="dlg" class="easyui-dialog" style="width:400px;height:280px;padding:10px 20px"
+            closed="true" buttons="#dlg-buttons">
+        <form id="fm" method="get" novalidate>
+            <div class="fitem">
+                <div style="margin-bottom:20px">
+                    <select id="to_path" class="easyui-combobox" name="to_path" label="To:" style="width:100%;" required="true"
+                            data-options="valueField: 'value', textField: 'text' ">
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div id="dlg-buttons">
+        <a href="javascript:void(0)" class="easyui-linkbutton c6" iconCls="icon-ok" onclick="doAction()" style="width:90px">Execute</a>
+        <a href="javascript:void(0)" class="easyui-linkbutton" iconCls="icon-cancel" onclick="javascript:$('#dlg').dialog('close')" style="width:90px">Cancel</a>
+    </div>
+
+    <!--This is the upload form.-->
+    <div class="container">
+    <div class="upload_form_cont">
+        <form id="upload_form" enctype="multipart/form-data" method="post" action="">
+            {% csrf_token %}
+            <div>
+                <div><label for="file1">Please select a file/s to upload</label></div>
+                <div><input type="file" name="file1" id="file1" multiple="true"
+                            webkitdirectory="true" directory="true" onchange="fileSelected();"/></div>
+            </div>
+            <div>
+                <input type="button" value="Upload" onclick="startUploading()"/>
+            </div>
+            <div id="fileinfo">
+                <div id="filename"></div>
+                <div id="filesize"></div>
+                <div id="filetype"></div>
+                <div id="filedim"></div>
+            </div>
+            <div id="error">You should select valid files only!</div>
+            <div id="error2">An error occurred while uploading the file</div>
+            <div id="abort">The upload has been canceled by the user or the browser dropped the connection
+            </div>
+            <div id="warnsize">Your file is very big. We can't accept it. Please select more small file
+            </div>
+            <div id="progress_info">
+                <div id="progress"></div>
+                <div id="progress_percent">&nbsp;</div>
+                <div class="clear_both"></div>
+                <div>
+                    <div id="speed">&nbsp;</div>
+                    <div id="remaining">&nbsp;</div>
+                    <div id="b_transfered">&nbsp;</div>
+                    <div class="clear_both"></div>
+                </div>
+                <div id="upload_response"></div>
+            </div>
+        </form>
+        <img id="preview"/>
+        </div>
+    </div>
+
+    <!--This is the create new directory form.-->
+    <div style="margin:20px 0;"></div>
+    <div class="easyui-panel" title="Create new folder" style="width:100%;max-width:400px;padding:30px 60px;">
+        <form id="ff" method="get"
+              action="{% url 'action' action_name='create_dir' path=current_path %}">
+            <div style="margin-bottom:20px">
+                <input class="easyui-textbox" name="dir_name" style="width:100%" data-options="label:'Name:',required:true"/>
+            </div>
+        </form>
+        <div style="text-align:center;padding:5px 0">
+            <a href="javascript:void(0)" class="easyui-linkbutton" onclick="createDir()" style="width:80px">Create</a>
+        </div>
+    </div>
+
+    {% if messages %}
+    <ul class="messages">
+        {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+{% endblock %}
+
+{% block js %}
+
+    <script type="text/javascript">
+        var url;
+        function popForm(link){
+            if (link.indexOf('move') > -1) {
+               $('#dlg').dialog('open').dialog('setTitle','Move To');
+            }
+            else if (link.indexOf('copy') > -1) {
+               $('#dlg').dialog('open').dialog('setTitle','Copy To');
+            }
+            $('#fm').form('clear');
+            path = link.split('/');
+            var newPath = []
+            for (var i = 4, n = path.length; i < n; i++)    {
+                newPath.push(path[i]);
+            }
+            path = newPath.join('/');
+            current_path = path.split('/');
+            current_path = current_path.slice(0, current_path.length -1);
+            current_path = current_path.join('/');
+            $('#to_path').combobox('reload', '/zapier/action/get_dirs/' + path);
+            if (link.indexOf('copy') > -1) {
+                var options = $('#to_path').combobox('options').data;
+                alert(options);
+                var values = $.map(options ,function(option) {
+                    return option.value;
+                });
+                alert(values);
+                if (current_path == '')  {
+                    $('#to_path').append('<option value="">'+Home+'</option>');
+                }
+                else {
+                    $('#to_path').append('<option value="'+current_path+'">'+current_path+'</option>');
+                }
+                $('#to_path').combobox('reload');
+            }
+            console.log(options);
+            url = link;
+        }
+        function doAction(){
+            $('#fm').form('submit',{
+                url: url,
+                onSubmit: function(){
+                    return $(this).form('validate');
+                },
+                success: function(result){
+                    $('#dlg').dialog('close');        // close the dialog
+                    var result = JSON.parse(result);
+                    window.location.replace(result.redirect_url);
+                }
+            });
+        }
+        function createDir(){
+            $('#ff').form('submit',{
+                success: function(result){
+                    var result = JSON.parse(result);
+                    window.location.replace(result.redirect_url);
+                }
+            });
+        }
+    </script>
+
+{% endblock %}
+
